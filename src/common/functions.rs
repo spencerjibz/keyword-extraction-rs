@@ -28,7 +28,7 @@ use unicode_segmentation::UnicodeSegmentation;
 #[cfg(not(feature = "parallel"))]
 fn basic_sort<'a>(map: &'a HashMap<&str, f32, RandomState>) -> Vec<(&'a &'a str, &'a f32)> {
     let mut map_values = map.iter().collect::<Vec<_>>();
-    map_values.sort_by(|a, b| {
+    map_values.sort_unstable_by(|a, b| {
         let order = b.1.partial_cmp(a.1).unwrap_or(Ordering::Equal);
 
         if order == Ordering::Equal {
@@ -43,7 +43,7 @@ fn basic_sort<'a>(map: &'a HashMap<&str, f32, RandomState>) -> Vec<(&'a &'a str,
 #[cfg(feature = "parallel")]
 fn parallel_sort<'a>(map: &'a HashMap<&str, f32, RandomState>) -> Vec<(&'a &'a str, &'a f32)> {
     let mut map_values = map.par_iter().collect::<Vec<_>>();
-    map_values.par_sort_by(|a, b| {
+    map_values.par_sort_unstable_by(|a, b| {
         let order = b.1.partial_cmp(a.1).unwrap_or(Ordering::Equal);
 
         if order == Ordering::Equal {
