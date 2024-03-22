@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with Rust Keyword Extraction. If not, see <http://www.gnu.org/licenses/>.
 
+use crate::tokenizer::to_static_str;
 use std::collections::HashSet;
-
 use stop_words::{get, LANGUAGE};
 
 use crate::*;
@@ -63,14 +63,14 @@ fn get_cs_hashset() -> HashSet<String> {
     HashSet::from_iter(["c", "computer"].iter().map(|s| s.to_string()))
 }
 
-fn get_stop_words() -> Vec<String> {
+fn get_stop_words<'a>() -> Vec<&'a str> {
     let cs_hashset = get_cs_hashset();
     get(LANGUAGE::English)
         .iter()
         .filter_map(|w| {
             let word = w.replace('\"', "");
             if !cs_hashset.contains(&word) {
-                Some(word)
+                Some(to_static_str(word))
             } else {
                 None
             }
@@ -78,7 +78,7 @@ fn get_stop_words() -> Vec<String> {
         .collect()
 }
 
-fn is_percent_in_hashset(vector: &[String], hashset: &HashSet<String>, percent: f64) -> bool {
+fn is_percent_in_hashset(vector: &[&str], hashset: &HashSet<&str>, percent: f64) -> bool {
     let mut count = 0;
 
     for item in vector {
@@ -123,7 +123,7 @@ fn test_tokenize() {
         "supportive collaborative environment",
         "chance cutting edge projects rust",
         "passionate rust development kickstart career supportive dynamic environment encourage apply",
-    ].iter().map(|s| s.to_string()).collect::<HashSet<String>>();
+    ].into_iter().collect();
 
     let word_tokens = tokenizer.split_into_words();
     let expected_words = vec![
@@ -262,9 +262,8 @@ fn test_tokenize() {
         "encourage",
         "apply",
     ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect::<HashSet<String>>();
+    .into_iter()
+    .collect::<HashSet<_>>();
 
     let paragraph_tokens = tokenizer.split_into_paragraphs();
     let expected_paragraphs = vec![
@@ -293,7 +292,7 @@ fn test_tokenize() {
         "supportive collaborative environment",
         "chance cutting edge projects rust",
         "passionate rust development kickstart career supportive dynamic environment encourage apply",
-    ].iter().map(|s| s.to_string()).collect::<HashSet<String>>();
+    ].into_iter().collect();
 
     assert!(is_percent_in_hashset(
         &sentence_tokens,
@@ -310,9 +309,10 @@ fn test_tokenize() {
 
 #[test]
 fn test_tf_idf() {
+    let words = get_stop_words();
     let tf_idf = tf_idf::TfIdf::new(tf_idf::TfIdfParams::TextBlock(
         TEXT,
-        &get_stop_words(),
+        &words,
         None,
         tf_idf::TextSplit::Paragraphs,
     ));
@@ -419,9 +419,8 @@ fn test_tf_idf() {
         "requirements",
         "responsibilities",
     ]
-    .iter()
-    .map(|x| x.to_string())
-    .collect::<HashSet<String>>();
+    .into_iter()
+    .collect();
     assert!(is_percent_in_hashset(&words_result, &expected_words, 85.0));
 }
 
@@ -429,7 +428,8 @@ fn test_tf_idf() {
 fn test_co_occurrence() {
     let documents =
         tokenizer::Tokenizer::new(TEXT, &get_stop_words(), None).split_into_paragraphs();
-    let word_vec = ["rust",
+    let word_vec = [
+        "rust",
         "development",
         "environment",
         "work",
@@ -438,7 +438,8 @@ fn test_co_occurrence() {
         "career",
         "code",
         "developer",
-        "dynamic"]
+        "dynamic",
+    ]
     .iter()
     .map(|x| x.to_string())
     .collect::<Vec<String>>();
@@ -474,14 +475,13 @@ fn test_rake() {
         "verbal communication skills ability",
         "team oriented environment nice",
         "rust programming language familiarity",
-    ];
+    ]
+    .into_iter()
+    .collect();
     let rake_struct = rake::Rake::new(rake::RakeParams::WithDefaults(TEXT, &get_stop_words()));
     assert!(is_percent_in_hashset(
         &rake_struct.get_ranked_phrases(10),
-        &rake_result
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<HashSet<String>>(),
+        &rake_result,
         90.0
     ));
 
@@ -508,30 +508,25 @@ fn test_text_rank() {
         "skills",
         "experience",
         "familiarity",
-    ];
+    ]
+    .into_iter()
+    .collect();
     let text_rank = text_rank::TextRank::new(text_rank::TextRankParams::WithDefaults(
         TEXT,
         &get_stop_words(),
     ));
     assert!(is_percent_in_hashset(
         &text_rank.get_ranked_words(10),
-        &expected_words
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<HashSet<String>>(),
+        &expected_words,
         90.0
     ));
     assert!(is_percent_in_hashset(
         &text_rank
             .get_ranked_phrases(5)
             .iter()
-            .flat_map(|phrases| phrases.split_whitespace().map(|w| w.to_string()))
-            .collect::<Vec<String>>(),
-        &text_rank
-            .get_ranked_words(10)
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<HashSet<String>>(),
+            .flat_map(|phrases| phrases.split_whitespace())
+            .collect::<Vec<&str>>(),
+        &text_rank.get_ranked_words(10).into_iter().collect(),
         90.0
     ));
 

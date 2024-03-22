@@ -20,20 +20,20 @@ use rayon::prelude::*;
 
 pub struct TextRankLogic;
 
-fn score_phrase(phrase: &str, word_rank: &HashMap<String, f32>) -> (String, f32) {
+fn score_phrase<'c>(phrase: &'c str, word_rank: &HashMap<&'c str, f32>) -> (&'c str, f32) {
     let words = phrase.split_whitespace().collect::<Vec<&str>>();
     let score = words
         .iter()
         .filter_map(|word| word_rank.get(*word))
         .sum::<f32>();
 
-    (phrase.to_string(), score / words.len() as f32)
+    (phrase, score / words.len() as f32)
 }
 
 fn score_word(
-    edges: &HashMap<String, f32>,
-    node_indexes: &HashMap<String, usize>,
-    outgoing_weight_sums: &HashMap<String, f32>,
+    edges: &HashMap<&str, f32>,
+    node_indexes: &HashMap<&str, usize>,
+    outgoing_weight_sums: &HashMap<&str, f32>,
     prev_scores: &[f32],
     damping: f32,
 ) -> f32 {
@@ -49,14 +49,14 @@ fn score_word(
     (1.0 - damping) + damping * new_score
 }
 
-fn get_node_indexes(nodes: &[&String]) -> HashMap<String, usize> {
+fn get_node_indexes<'a>(nodes: &[&&'a str]) -> HashMap<&'a str, usize> {
     #[cfg(feature = "parallel")]
     {
         nodes
             .par_iter()
             .enumerate()
-            .map(|(i, w)| (w.to_string(), i))
-            .collect::<HashMap<String, usize>>()
+            .map(|(i, &&w)| (w, i))
+            .collect()
     }
 
     #[cfg(not(feature = "parallel"))]
@@ -64,15 +64,15 @@ fn get_node_indexes(nodes: &[&String]) -> HashMap<String, usize> {
         nodes
             .iter()
             .enumerate()
-            .map(|(i, w)| (w.to_string(), i))
-            .collect::<HashMap<String, usize>>()
+            .map(|(i, &&w)| (w, i))
+            .collect()
     }
 }
 
 fn get_scores(
-    graph: &HashMap<String, HashMap<String, f32>>,
-    node_indexes: &HashMap<String, usize>,
-    outgoing_weight_sums: &HashMap<String, f32>,
+    graph: &HashMap<&str, HashMap<&str, f32>>,
+    node_indexes: &HashMap<&str, usize>,
+    outgoing_weight_sums: &HashMap<&str, f32>,
     prev_scores: &[f32],
     damping: f32,
 ) -> Vec<f32> {
@@ -128,32 +128,32 @@ fn check_tolorance(scores: &[f32], prev_scores: &[f32], tol: f32) -> bool {
 }
 
 impl TextRankLogic {
-    pub fn build_text_rank(
-        words: Vec<String>,
-        phrases: Vec<String>,
+    pub fn build_text_rank<'a>(
+        words: &[&'a str],
+        phrases: &[&'a str],
         window_size: usize,
         damping: f32,
         tol: f32,
-    ) -> (HashMap<String, f32>, HashMap<String, f32>) {
+    ) -> (HashMap<&'a str, f32>, HashMap<&'a str, f32>) {
         let word_rank =
             Self::create_word_rank(Self::create_graph(words, window_size), damping, tol);
         let phrase_rank = Self::rank_phrases(phrases, &word_rank);
         (word_rank, phrase_rank)
     }
 
-    fn add_edge(graph: &mut HashMap<String, HashMap<String, f32>>, word1: &str, word2: &str) {
+    fn add_edge<'c>(graph: &mut HashMap<&'c str, HashMap<&'c str, f32>>, word1: &'c str, word2: &'c str) {
         graph
-            .entry(word1.to_string())
+            .entry(word1)
             .or_default()
-            .entry(word2.to_string())
+            .entry(word2)
             .and_modify(|e| *e += 1.0)
             .or_insert(1.0);
     }
 
-    fn create_graph(
-        words: Vec<String>,
+    fn create_graph<'a>(
+        words: &[&'a str],
         window_size: usize,
-    ) -> HashMap<String, HashMap<String, f32>> {
+    ) -> HashMap<&'a str, HashMap<&'a str, f32>> {
         let mut graph = HashMap::new();
 
         words
@@ -163,7 +163,7 @@ impl TextRankLogic {
                 words[i + 1..]
                     .iter()
                     .take(window_size)
-                    .filter(|word2| word1.as_str() != word2.as_str())
+                    .filter( move |&word2| word1 != word2)
                     .map(move |word2| (word1, word2))
             })
             .for_each(|(word1, word2)| {
@@ -174,16 +174,16 @@ impl TextRankLogic {
         graph
     }
 
-    fn get_outgoing_weight_sum(
-        graph: &HashMap<String, HashMap<String, f32>>,
-    ) -> HashMap<String, f32> {
+    fn get_outgoing_weight_sum<'a>(
+        graph: &HashMap<&'a str, HashMap<&str, f32>>,
+    ) -> HashMap<&'a str, f32> {
         #[cfg(feature = "parallel")]
         {
             graph
                 .par_iter()
-                .map(|(node, edges)| {
+                .map(|(&node, edges)| {
                     let outgoing_weight_sum = edges.values().sum();
-                    (node.to_string(), outgoing_weight_sum)
+                    (node, outgoing_weight_sum)
                 })
                 .collect()
         }
@@ -192,20 +192,20 @@ impl TextRankLogic {
         {
             graph
                 .iter()
-                .map(|(node, edges)| {
+                .map(|(&node, edges)| {
                     let outgoing_weight_sum = edges.values().sum();
-                    (node.to_string(), outgoing_weight_sum)
+                    (node, outgoing_weight_sum)
                 })
                 .collect()
         }
     }
 
-    fn create_word_rank(
-        graph: HashMap<String, HashMap<String, f32>>,
+    fn create_word_rank<'c>(
+        graph: HashMap<&'c str, HashMap<&str, f32>>,
         damping: f32,
         tol: f32,
-    ) -> HashMap<String, f32> {
-        let nodes = graph.keys().collect::<Vec<&String>>();
+    ) -> HashMap<&'c str, f32> {
+        let nodes = graph.keys().collect::<Vec<_>>();
         let n = nodes.len();
         let node_indexes = get_node_indexes(&nodes);
         let mut scores = vec![1.0_f32; n];
@@ -230,29 +230,29 @@ impl TextRankLogic {
         {
             nodes
                 .par_iter()
-                .map(|&node| (node.to_string(), scores[node_indexes[node]]))
-                .collect::<HashMap<String, f32>>()
+                .map(|&&node| (node, scores[node_indexes[node]]))
+                .collect()
         }
 
         #[cfg(not(feature = "parallel"))]
         {
             nodes
                 .iter()
-                .map(|&node| (node.to_string(), scores[node_indexes[node]]))
-                .collect::<HashMap<String, f32>>()
+                .map(|&&node| (node, scores[node_indexes[node]]))
+                .collect()
         }
     }
 
-    fn rank_phrases(
-        phrases: Vec<String>,
-        word_scores: &HashMap<String, f32>,
-    ) -> HashMap<String, f32> {
+    fn rank_phrases<'c>(
+        phrases: &[&'c str],
+        word_scores: &HashMap<&'c str, f32>,
+    ) -> HashMap<&'c str, f32> {
         #[cfg(feature = "parallel")]
         {
             phrases
                 .par_iter()
                 .map(|phrase| score_phrase(phrase, word_scores))
-                .collect::<HashMap<String, f32>>()
+                .collect()
         }
 
         #[cfg(not(feature = "parallel"))]
@@ -260,7 +260,7 @@ impl TextRankLogic {
             phrases
                 .iter()
                 .map(|phrase| score_phrase(phrase, word_scores))
-                .collect::<HashMap<String, f32>>()
+                .collect()
         }
     }
 }

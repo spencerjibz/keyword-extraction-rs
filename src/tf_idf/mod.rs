@@ -23,12 +23,13 @@ pub use tf_idf_params::{TextSplit, TfIdfParams};
 
 use crate::common::{get_ranked_scores, get_ranked_strings};
 
-pub struct TfIdf(HashMap<String, f32>);
+pub struct TfIdf<'a>(HashMap<&'a str, f32>);
 
-impl TfIdf {
-    /// Creates a new TfIdf struct with the given parameters.
-    pub fn new(params: TfIdfParams) -> Self {
+impl<'a> TfIdf<'a> {
+    /// Creates a new TfIdf struct with the given parameters.                        
+    pub fn new(params: TfIdfParams<'a>) -> Self {
         let documents = params.get_documents();
+
         Self(TfIdfLogic::build_tfidf(&documents))
     }
 
@@ -38,7 +39,7 @@ impl TfIdf {
     }
 
     /// Gets the top n words with the highest score.
-    pub fn get_ranked_words(&self, n: usize) -> Vec<String> {
+    pub fn get_ranked_words(&'a self, n: usize) -> Vec<&'a str> {
         get_ranked_strings(&self.0, n)
     }
 
@@ -48,7 +49,7 @@ impl TfIdf {
     }
 
     /// Gets the word scores map.
-    pub fn get_word_scores_map(&self) -> &HashMap<String, f32> {
+    pub fn get_word_scores_map(&self) -> &HashMap<&'a str, f32> {
         &self.0
     }
 }

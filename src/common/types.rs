@@ -14,8 +14,8 @@
 // along with Rust Keyword Extraction. If not, see <http://www.gnu.org/licenses/>.
 
 pub type Text<'a> = &'a str;
-pub type Stopwords<'a> = &'a [String];
-pub type Punctuation<'a> = Option<&'a [String]>;
-pub type Documents<'a> = &'a [String];
+pub type Stopwords<'a> = &'a [&'a str];
+pub type Punctuation<'a> = Option<&'a [&'a str]>;
+pub type Documents<'a> = &'a [&'a str];
 pub type WindowSize = usize;
 pub type PhraseLength = Option<usize>;

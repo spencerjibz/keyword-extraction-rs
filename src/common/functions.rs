@@ -17,6 +17,7 @@ use std::{
     cmp::Ordering,
     collections::{hash_map::RandomState, HashMap, HashSet},
 };
+use crate::tokenizer::to_static_str;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -25,8 +26,8 @@ use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[cfg(not(feature = "parallel"))]
-fn basic_sort<'a>(map: &'a HashMap<String, f32, RandomState>) -> Vec<(&'a String, &'a f32)> {
-    let mut map_values = map.iter().collect::<Vec<(&'a String, &'a f32)>>();
+fn basic_sort<'a>(map: &'a HashMap<&str, f32, RandomState>) -> Vec<(&'a & 'a str, &'a f32)> {
+    let mut map_values = map.iter().collect::<Vec<_>>();
     map_values.sort_by(|a, b| {
         let order = b.1.partial_cmp(a.1).unwrap_or(Ordering::Equal);
 
@@ -40,8 +41,8 @@ fn basic_sort<'a>(map: &'a HashMap<String, f32, RandomState>) -> Vec<(&'a String
 }
 
 #[cfg(feature = "parallel")]
-fn parallel_sort<'a>(map: &'a HashMap<String, f32, RandomState>) -> Vec<(&'a String, &'a f32)> {
-    let mut map_values = map.par_iter().collect::<Vec<(&'a String, &'a f32)>>();
+fn parallel_sort<'a>(map: &'a HashMap<&str, f32, RandomState>) -> Vec<(&'a &'a str, &'a f32)> {
+    let mut map_values = map.par_iter().collect::<Vec<_>>();
     map_values.par_sort_by(|a, b| {
         let order = b.1.partial_cmp(a.1).unwrap_or(Ordering::Equal);
 
@@ -51,10 +52,10 @@ fn parallel_sort<'a>(map: &'a HashMap<String, f32, RandomState>) -> Vec<(&'a Str
 
         order
     });
-    map_values
+    map_values 
 }
 
-fn sort_ranked_map(map: &HashMap<String, f32, RandomState>) -> Vec<(&String, &f32)> {
+fn sort_ranked_map<'a>(map: &'a HashMap<&'a str, f32, RandomState>) -> Vec<(&'a &'a str, &'a f32)> {
     #[cfg(feature = "parallel")]
     {
         parallel_sort(map)
@@ -66,14 +67,14 @@ fn sort_ranked_map(map: &HashMap<String, f32, RandomState>) -> Vec<(&String, &f3
     }
 }
 
-pub fn get_ranked_strings(map: &HashMap<String, f32, RandomState>, n: usize) -> Vec<String> {
+pub fn get_ranked_strings<'a>(map: &'a HashMap<&'a str, f32, RandomState>, n: usize) -> Vec<&'a str> {
     #[cfg(feature = "parallel")]
     {
         sort_ranked_map(map)
-            .par_iter()
+            .par_iter()               
             .take(n)
-            .map(|(word, _)| word.to_string())
-            .collect::<Vec<String>>()
+            .map(|(&word, _)| word)
+            .collect()
     }
 
     #[cfg(not(feature = "parallel"))]
@@ -81,12 +82,12 @@ pub fn get_ranked_strings(map: &HashMap<String, f32, RandomState>, n: usize) -> 
         sort_ranked_map(map)
             .iter()
             .take(n)
-            .map(|(word, _)| word.to_string())
-            .collect::<Vec<String>>()
+            .map(|(&word, _)| word)
+            .collect()
     }
 }
 
-pub fn get_ranked_scores(map: &HashMap<String, f32, RandomState>, n: usize) -> Vec<(String, f32)> {
+pub fn get_ranked_scores(map: &HashMap<&str, f32, RandomState>, n: usize) -> Vec<(String, f32)> {
     #[cfg(feature = "parallel")]
     {
         sort_ranked_map(map)
@@ -114,17 +115,17 @@ pub fn is_punctuation(word: &str, punctuation: &HashSet<String>) -> bool {
     word.is_empty() || ((word.graphemes(true).count() == 1) && punctuation.contains(word))
 }
 
-pub fn process_word(
+pub fn process_word<'a>(
     w: &str,
     special_char_regex: &Regex,
     stopwords: &HashSet<String>,
     punctuation: &HashSet<String>,
-) -> Option<String> {
+) -> Option<&'a str> {
     let word = special_char_regex.replace_all(w.trim(), "").to_lowercase();
 
     if is_punctuation(&word, punctuation) || stopwords.contains(&word) {
         return None;
     }
 
-    Some(word)
+    Some(to_static_str(word))
 }

@@ -22,12 +22,12 @@ pub use rake_params::RakeParams;
 
 use crate::common::{get_ranked_scores, get_ranked_strings};
 
-pub struct Rake {
-    word_scores: HashMap<String, f32>,
-    phrase_scores: HashMap<String, f32>,
+pub struct Rake <'s> {
+    word_scores: HashMap<&'s str, f32>,
+    phrase_scores: HashMap<&'s str, f32>,
 }
 
-impl Rake {
+impl <'s> Rake <'s> {
     /// Create a new Rake instance.
     pub fn new(params: RakeParams) -> Self {
         let (text, stopwords, punctuation, phrase_len) = params.get_rake_params();
@@ -41,7 +41,7 @@ impl Rake {
     }
 
     /// Gets the top n words with the highest score.
-    pub fn get_ranked_keyword(&self, n: usize) -> Vec<String> {
+    pub fn get_ranked_keyword(&'s self, n: usize) -> Vec<&'s str> {
         get_ranked_strings(&self.word_scores, n)
     }
 
@@ -51,7 +51,7 @@ impl Rake {
     }
 
     /// Gets the top n phrases with the highest score.
-    pub fn get_ranked_phrases(&self, n: usize) -> Vec<String> {
+    pub fn get_ranked_phrases(&'s self, n: usize) -> Vec<&'s str> {
         get_ranked_strings(&self.phrase_scores, n)
     }
 
@@ -71,12 +71,12 @@ impl Rake {
     }
 
     /// Gets the base hashmap of words and their score.
-    pub fn get_word_scores_map(&self) -> &HashMap<String, f32> {
+    pub fn get_word_scores_map(&self) -> &HashMap<&'s str, f32> {
         &self.word_scores
     }
 
     /// Gets the base hashmap of phrases and their score.
-    pub fn get_phrase_scores_map(&self) -> &HashMap<String, f32> {
+    pub fn get_phrase_scores_map(&self) -> &HashMap<&'s str, f32> {
         &self.phrase_scores
     }
 }

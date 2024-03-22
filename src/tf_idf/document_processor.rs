@@ -17,6 +17,7 @@ use std::collections::HashSet;
 
 use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
+use crate::tokenizer::to_static_str;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -24,52 +25,47 @@ use rayon::prelude::*;
 use crate::common::{get_special_char_regex, process_word, PUNCTUATION};
 
 pub struct DocumentProcessor<'a> {
-    documents: &'a [String],
+    documents: &'a [&'a str],
     stopwords: HashSet<String>,
     punctuation: HashSet<String>,
 }
 
 impl<'a> DocumentProcessor<'a> {
     pub fn new(
-        documents: &'a [String],
-        stopwords: &'a [String],
-        punctuation: &'a Option<&'a [String]>,
+        documents: &'a [&'a str],
+        stopwords: &'a [&'a str],
+        punctuation: &'a Option<&'a [&'a str]>,
     ) -> Self {
         Self {
             documents,
             stopwords: stopwords
                 .iter()
-                .map(|s| s.to_owned())
+                .map(|&s| s.to_owned())
                 .collect::<HashSet<String>>(),
             punctuation: punctuation
-                .unwrap_or(
-                    &PUNCTUATION
-                        .iter()
-                        .map(|s| s.to_string())
-                        .collect::<Vec<String>>(),
-                )
+                .unwrap_or(&PUNCTUATION)
                 .iter()
                 .map(|s| s.to_string())
                 .collect::<HashSet<String>>(),
         }
     }
 
-    fn process_document(&self, document: &str, special_char_regex: &Regex) -> String {
-        document
+    fn process_document<'c>(& self, document: &str, special_char_regex: &Regex) -> &'c str {
+        to_static_str(document
             .unicode_sentences()
             .map(|s| {
                 s.split_word_bounds()
                     .filter_map(|w| {
                         process_word(w, special_char_regex, &self.stopwords, &self.punctuation)
                     })
-                    .collect::<Vec<String>>()
+                    .collect::<Vec<_>>()
                     .join(" ")
             })
             .collect::<Vec<String>>()
-            .join(" ")
+            .join(" "))
     }
 
-    pub fn process_documents(&self) -> Vec<String> {
+    pub fn process_documents(&self) -> Vec<&'static str> {
         let special_char_regex = get_special_char_regex();
 
         #[cfg(feature = "parallel")]
@@ -77,7 +73,7 @@ impl<'a> DocumentProcessor<'a> {
             self.documents
                 .par_iter()
                 .map(|doc| self.process_document(doc, &special_char_regex))
-                .collect::<Vec<String>>()
+                .collect::<Vec<_>>()
         }
 
         #[cfg(not(feature = "parallel"))]
@@ -85,7 +81,7 @@ impl<'a> DocumentProcessor<'a> {
             self.documents
                 .iter()
                 .map(|doc| self.process_document(doc, &special_char_regex))
-                .collect::<Vec<String>>()
+                .collect::<Vec<_>>()
         }
     }
 }

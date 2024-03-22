@@ -56,7 +56,7 @@ pub enum TfIdfParams<'a> {
 
 impl<'a> TfIdfParams<'a> {
     /// Returns the documents to be analyzed.
-    pub fn get_documents(&self) -> Vec<String> {
+    pub fn get_documents(&self) -> Vec<&'a str> {
         match self {
             TfIdfParams::UnprocessedDocuments(documents, stopwords, punctuatuion) => {
                 DocumentProcessor::new(documents, stopwords, punctuatuion).process_documents()
@@ -73,3 +73,4 @@ impl<'a> TfIdfParams<'a> {
         }
     }
 }
+                

@@ -55,7 +55,7 @@ fn create_words_indexes(words: &[String]) -> HashMap<String, usize> {
 }
 
 fn get_matrix(
-    documents: &[String],
+    documents: &[&str],
     words_indexes: &HashMap<String, usize>,
     length: usize,
     window_size: usize,

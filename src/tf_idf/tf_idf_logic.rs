@@ -21,7 +21,7 @@ use rayon::prelude::*;
 pub struct TfIdfLogic;
 
 impl TfIdfLogic {
-    pub fn build_tfidf(documents: &[String]) -> HashMap<String, f32> {
+    pub fn build_tfidf<'c>(documents: & [&'c str]) -> HashMap<&'c str, f32> {
         Self::l2_normalize(Self::calculate_tf_idf(
             Self::calculate_tf(Self::generate_word_hashmap(documents)),
             Self::calculate_idf(
@@ -31,7 +31,7 @@ impl TfIdfLogic {
         ))
     }
 
-    fn generate_word_hashmap(documents: &[String]) -> HashMap<&str, f32> {
+    fn generate_word_hashmap<'a>(documents: &[&'a str]) -> HashMap<&'a str, f32> {
         #[cfg(feature = "parallel")]
         {
             Self::parallel_word_hashmap(documents)
@@ -44,7 +44,7 @@ impl TfIdfLogic {
     }
 
     #[cfg(not(feature = "parallel"))]
-    fn basic_word_hashmap(documents: &[String]) -> HashMap<&str, f32> {
+    fn basic_word_hashmap<'a>(documents: &[&'a str]) -> HashMap<&'a str, f32> {
         documents
             .iter()
             .flat_map(|document| document.split_whitespace())
@@ -56,30 +56,24 @@ impl TfIdfLogic {
     }
 
     #[cfg(feature = "parallel")]
-    fn parallel_word_hashmap(documents: &[String]) -> HashMap<&str, f32> {
+    fn parallel_word_hashmap<'a>(documents: &[&'a str]) -> HashMap<&'a str, f32> {
         documents
             .par_iter()
-            .fold(
-                HashMap::new,
-                |mut acc, document| {
-                    document
-                        .split_whitespace()
-                        .for_each(|word| *acc.entry(word).or_insert(0.0) += 1.0);
-                    acc
-                },
-            )
-            .reduce(
-                HashMap::new,
-                |mut acc, hmap| {
-                    for (word, count) in hmap {
-                        *acc.entry(word).or_insert(0.0) += count;
-                    }
-                    acc
-                },
-            )
+            .fold(HashMap::new, |mut acc, document| {
+                document
+                    .split_whitespace()
+                    .for_each(|word| *acc.entry(word).or_insert(0.0) += 1.0);
+                acc
+            })
+            .reduce(HashMap::new, |mut acc, hmap| {
+                for (word, count) in hmap {
+                    *acc.entry(word).or_insert(0.0) += count;
+                }
+                acc
+            })
     }
 
-    fn generate_unique_word_hashmap(documents: &[String]) -> HashMap<&str, f32> {
+    fn generate_unique_word_hashmap<'a>(documents: &[&'a str]) -> HashMap<&'a str, f32> {
         #[cfg(feature = "parallel")]
         {
             Self::parallel_unique_word_hashmap(documents)
@@ -92,7 +86,7 @@ impl TfIdfLogic {
     }
 
     #[cfg(not(feature = "parallel"))]
-    fn basic_unique_word_hashmap(documents: &[String]) -> HashMap<&str, f32> {
+    fn basic_unique_word_hashmap<'a>(documents: &[&'a str]) -> HashMap<&'a str, f32> {
         documents
             .iter()
             .map(|document| document.split_whitespace().collect::<HashSet<&str>>())
@@ -105,28 +99,22 @@ impl TfIdfLogic {
     }
 
     #[cfg(feature = "parallel")]
-    fn parallel_unique_word_hashmap(documents: &[String]) -> HashMap<&str, f32> {
+    fn parallel_unique_word_hashmap<'c>(documents: &[&'c str]) -> HashMap<&'c str, f32> {
         documents
             .par_iter()
             .map(|document| document.split_whitespace().collect::<HashSet<&str>>())
-            .fold(
-                HashMap::new,
-                |mut acc, unique_words| {
-                    unique_words
-                        .into_iter()
-                        .for_each(|word| *acc.entry(word).or_insert(0.0) += 1.0);
-                    acc
-                },
-            )
-            .reduce(
-                HashMap::new,
-                |mut acc, hmap| {
-                    for (word, count) in hmap {
-                        *acc.entry(word).or_insert(0.0) += count;
-                    }
-                    acc
-                },
-            )
+            .fold(HashMap::new, |mut acc, unique_words| {
+                unique_words
+                    .into_iter()
+                    .for_each(|word| *acc.entry(word).or_insert(0.0) += 1.0);
+                acc
+            })
+            .reduce(HashMap::new, |mut acc, hmap| {
+                for (word, count) in hmap {
+                    *acc.entry(word).or_insert(0.0) += count;
+                }
+                acc
+            })
     }
 
     fn calculate_tf(tf: HashMap<&str, f32>) -> HashMap<&str, f32> {
@@ -203,7 +191,7 @@ impl TfIdfLogic {
         }
     }
 
-    fn l2_normalize(tf_id: HashMap<&str, f32>) -> HashMap<String, f32> {
+    fn l2_normalize(tf_id: HashMap<&str, f32>) -> HashMap<&str, f32> {
         #[cfg(feature = "parallel")]
         {
             Self::parallel_l2_normalize(tf_id)
@@ -216,7 +204,7 @@ impl TfIdfLogic {
     }
 
     #[cfg(not(feature = "parallel"))]
-    fn basic_l2_normaliza(tf_id: HashMap<&str, f32>) -> HashMap<String, f32> {
+    fn basic_l2_normaliza(tf_id: HashMap<&str, f32>) -> HashMap<&str, f32> {
         let l2_norm = tf_id
             .values()
             .map(|value| value * value)
@@ -224,12 +212,12 @@ impl TfIdfLogic {
             .sqrt();
         tf_id
             .iter()
-            .map(|(key, value)| (key.to_string(), value / l2_norm))
-            .collect::<HashMap<String, f32>>()
+            .map(|(&key, value)| (key, value / l2_norm))
+            .collect()
     }
 
     #[cfg(feature = "parallel")]
-    fn parallel_l2_normalize(tf_id: HashMap<&str, f32>) -> HashMap<String, f32> {
+    fn parallel_l2_normalize<'a>(tf_id: HashMap<&'a str, f32>) -> HashMap<&'a str, f32> {
         let l2_norm = tf_id
             .par_iter()
             .map(|(_, value)| value * value)
@@ -238,7 +226,7 @@ impl TfIdfLogic {
 
         tf_id
             .par_iter()
-            .map(|(key, value)| (key.to_string(), value / l2_norm))
-            .collect::<HashMap<String, f32>>()
+            .map(|(&key, value)| (key, value / l2_norm))
+            .collect::<HashMap<&'a str, f32>>()
     }
 }
