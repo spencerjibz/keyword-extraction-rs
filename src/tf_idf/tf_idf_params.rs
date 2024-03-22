@@ -73,4 +73,3 @@ impl<'a> TfIdfParams<'a> {
         }
     }
 }
-                

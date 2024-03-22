@@ -21,7 +21,7 @@ use rayon::prelude::*;
 pub struct TfIdfLogic;
 
 impl TfIdfLogic {
-    pub fn build_tfidf<'c>(documents: & [&'c str]) -> HashMap<&'c str, f32> {
+    pub fn build_tfidf<'c>(documents: &[&'c str]) -> HashMap<&'c str, f32> {
         Self::l2_normalize(Self::calculate_tf_idf(
             Self::calculate_tf(Self::generate_word_hashmap(documents)),
             Self::calculate_idf(

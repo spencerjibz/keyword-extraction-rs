@@ -93,7 +93,8 @@ fn is_percent_in_hashset(vector: &[&str], hashset: &HashSet<&str>, percent: f64)
 
 #[test]
 fn test_tokenize() {
-    let tokenizer = tokenizer::Tokenizer::new(TEXT, &get_stop_words(), None);
+    let stop_words = get_stop_words();
+    let tokenizer = tokenizer::Tokenizer::new(TEXT, &stop_words, None);
     let sentence_tokens = tokenizer.split_into_sentences();
     let expected_sentences = vec![
         "title junior rust developer",

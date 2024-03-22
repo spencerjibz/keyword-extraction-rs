@@ -13,9 +13,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with Rust Keyword Extraction. If not, see <http://www.gnu.org/licenses/>.
 
+use regex::Regex;
 use std::collections::HashSet;
 
-use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[cfg(feature = "parallel")]
@@ -26,10 +26,10 @@ use crate::common::{
     Text, PUNCTUATION,
 };
 
-pub struct Tokenizer {
-    text: String,
-    stopwords: HashSet<String>,
-    punctuation: HashSet<String>,
+pub struct Tokenizer<'e> {
+    text: &'e str,
+    stopwords: HashSet<&'e str>,
+    punctuation: HashSet<&'e str>,
 }
 
 #[cfg(feature = "parallel")]
@@ -42,8 +42,8 @@ fn create_phrase(
     mut phrase: String,
     base_word: &str,
     special_char_regex: &Regex,
-    punctuation: &HashSet<String>,
-    stopwords: &HashSet<String>,
+    punctuation: &HashSet<&str>,
+    stopwords: &HashSet<&str>,
     length: Option<usize>,
 ) -> (Vec<&'static str>, String) {
     let word = special_char_regex
@@ -51,7 +51,7 @@ fn create_phrase(
         .to_lowercase();
 
     if !is_punctuation(&word, punctuation) {
-        if stopwords.contains(&word) {
+        if stopwords.contains(word.as_str()) {
             if !phrase.is_empty() {
                 phrases.push(to_static_str(phrase));
                 phrase = String::new();
@@ -77,8 +77,8 @@ fn create_phrase(
 fn process_sentences<'c>(
     sentence: &str,
     special_char_regex: &Regex,
-    punctuation: &HashSet<String>,
-    stopwords: &HashSet<String>,
+    punctuation: &HashSet<&str>,
+    stopwords: &HashSet<&str>,
 ) -> &'c str {
     let result = sentence
         .split_word_bounds()
@@ -91,8 +91,8 @@ fn process_sentences<'c>(
 fn process_paragraphs<'a>(
     paragraph: &str,
     special_char_regex: &Regex,
-    punctuation: &HashSet<String>,
-    stopwords: &HashSet<String>,
+    punctuation: &HashSet<&str>,
+    stopwords: &HashSet<&str>,
 ) -> Option<&'a str> {
     if paragraph.trim().is_empty() {
         return None;
@@ -111,20 +111,17 @@ fn process_paragraphs<'a>(
     Some(static_str)
 }
 
-impl Tokenizer {
+impl<'e> Tokenizer<'e> {
     /// Create a new Tokenizer instance.
-    pub fn new(text: Text, stopwords: Stopwords, punctuation: Punctuation) -> Self {
+    pub fn new(text: Text<'e>, stopwords: Stopwords<'e>, punctuation: Punctuation<'e>) -> Self {
         Self {
-            text: text.to_owned(),
-            stopwords: stopwords
-                .iter()
-                .map(|&s| s.to_owned())
-                .collect::<HashSet<String>>(),
+            text,
+            stopwords: stopwords.iter().copied().collect(),
             punctuation: punctuation
                 .unwrap_or(&PUNCTUATION)
                 .iter()
-                .map(|s| s.to_string())
-                .collect::<HashSet<String>>(),
+                .copied()
+                .collect(),
         }
     }
 
@@ -256,7 +253,7 @@ impl Tokenizer {
         length: Option<usize>,
     ) -> Vec<&'c str> {
         get_sentence_space_regex()
-            .replace_all(&self.text, "¶")
+            .replace_all(self.text, "¶")
             .par_split('¶')
             .map(|s| {
                 let (mut phrases, last_phrase) =

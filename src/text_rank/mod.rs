@@ -25,12 +25,12 @@ use crate::{
     tokenizer::Tokenizer,
 };
 
-pub struct TextRank <'a> {
+pub struct TextRank<'a> {
     word_rank: HashMap<&'a str, f32>,
     phrase_rank: HashMap<&'a str, f32>,
 }
 
-impl <'a> TextRank<'a> {
+impl<'a> TextRank<'a> {
     /// Create a new TextRank instance.
     pub fn new(params: TextRankParams) -> Self {
         let (text, stop_words, punctuation, window_size, damping, tol, phrase_length) =
@@ -66,7 +66,7 @@ impl <'a> TextRank<'a> {
     }
 
     /// Get the top n words with the highest score and their score.
-    pub fn get_ranked_word_scores(&self, n: usize) -> Vec<(String, f32)> {
+    pub fn get_ranked_word_scores(&'a self, n: usize) -> Vec<(&'a str, f32)> {
         get_ranked_scores(&self.word_rank, n)
     }
 
@@ -76,7 +76,7 @@ impl <'a> TextRank<'a> {
     }
 
     /// Get the top n phrases with the highest score and their score.
-    pub fn get_ranked_phrase_scores(&self, n: usize) -> Vec<(String, f32)> {
+    pub fn get_ranked_phrase_scores(&'a self, n: usize) -> Vec<(&'a str, f32)> {
         get_ranked_scores(&self.phrase_rank, n)
     }
 

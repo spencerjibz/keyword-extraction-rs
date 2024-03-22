@@ -22,12 +22,12 @@ pub use rake_params::RakeParams;
 
 use crate::common::{get_ranked_scores, get_ranked_strings};
 
-pub struct Rake <'s> {
+pub struct Rake<'s> {
     word_scores: HashMap<&'s str, f32>,
     phrase_scores: HashMap<&'s str, f32>,
 }
 
-impl <'s> Rake <'s> {
+impl<'s> Rake<'s> {
     /// Create a new Rake instance.
     pub fn new(params: RakeParams) -> Self {
         let (text, stopwords, punctuation, phrase_len) = params.get_rake_params();
@@ -46,7 +46,7 @@ impl <'s> Rake <'s> {
     }
 
     /// Gets the top n words with the highest score and their score.
-    pub fn get_ranked_keyword_scores(&self, n: usize) -> Vec<(String, f32)> {
+    pub fn get_ranked_keyword_scores(&'s self, n: usize) -> Vec<(&'s str, f32)> {
         get_ranked_scores(&self.word_scores, n)
     }
 
@@ -56,7 +56,7 @@ impl <'s> Rake <'s> {
     }
 
     /// Gets the top n phrases with the highest score and their score.
-    pub fn get_ranked_phares_scores(&self, n: usize) -> Vec<(String, f32)> {
+    pub fn get_ranked_phares_scores(&'s self, n: usize) -> Vec<(&'s str, f32)> {
         get_ranked_scores(&self.phrase_scores, n)
     }
 

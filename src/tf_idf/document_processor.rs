@@ -15,9 +15,9 @@
 
 use std::collections::HashSet;
 
+use crate::tokenizer::to_static_str;
 use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
-use crate::tokenizer::to_static_str;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -26,8 +26,8 @@ use crate::common::{get_special_char_regex, process_word, PUNCTUATION};
 
 pub struct DocumentProcessor<'a> {
     documents: &'a [&'a str],
-    stopwords: HashSet<String>,
-    punctuation: HashSet<String>,
+    stopwords: HashSet<&'a str>,
+    punctuation: HashSet<&'a str>,
 }
 
 impl<'a> DocumentProcessor<'a> {
@@ -38,31 +38,30 @@ impl<'a> DocumentProcessor<'a> {
     ) -> Self {
         Self {
             documents,
-            stopwords: stopwords
-                .iter()
-                .map(|&s| s.to_owned())
-                .collect::<HashSet<String>>(),
+            stopwords: stopwords.iter().copied().collect(),
             punctuation: punctuation
                 .unwrap_or(&PUNCTUATION)
                 .iter()
-                .map(|s| s.to_string())
-                .collect::<HashSet<String>>(),
+                .copied()
+                .collect(),
         }
     }
 
-    fn process_document<'c>(& self, document: &str, special_char_regex: &Regex) -> &'c str {
-        to_static_str(document
-            .unicode_sentences()
-            .map(|s| {
-                s.split_word_bounds()
-                    .filter_map(|w| {
-                        process_word(w, special_char_regex, &self.stopwords, &self.punctuation)
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            })
-            .collect::<Vec<String>>()
-            .join(" "))
+    fn process_document<'c>(&self, document: &str, special_char_regex: &Regex) -> &'c str {
+        to_static_str(
+            document
+                .unicode_sentences()
+                .map(|s| {
+                    s.split_word_bounds()
+                        .filter_map(|w| {
+                            process_word(w, special_char_regex, &self.stopwords, &self.punctuation)
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+                .collect::<Vec<String>>()
+                .join(" "),
+        )
     }
 
     pub fn process_documents(&self) -> Vec<&'static str> {

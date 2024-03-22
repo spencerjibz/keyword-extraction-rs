@@ -44,7 +44,7 @@ impl<'a> TfIdf<'a> {
     }
 
     /// Gets the top n words with the highest score.
-    pub fn get_ranked_word_scores(&self, n: usize) -> Vec<(String, f32)> {
+    pub fn get_ranked_word_scores(&self, n: usize) -> Vec<(&str, f32)> {
         get_ranked_scores(&self.0, n)
     }
 

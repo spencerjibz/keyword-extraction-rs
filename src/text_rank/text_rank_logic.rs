@@ -61,11 +61,7 @@ fn get_node_indexes<'a>(nodes: &[&&'a str]) -> HashMap<&'a str, usize> {
 
     #[cfg(not(feature = "parallel"))]
     {
-        nodes
-            .iter()
-            .enumerate()
-            .map(|(i, &&w)| (w, i))
-            .collect()
+        nodes.iter().enumerate().map(|(i, &&w)| (w, i)).collect()
     }
 }
 
@@ -141,7 +137,11 @@ impl TextRankLogic {
         (word_rank, phrase_rank)
     }
 
-    fn add_edge<'c>(graph: &mut HashMap<&'c str, HashMap<&'c str, f32>>, word1: &'c str, word2: &'c str) {
+    fn add_edge<'c>(
+        graph: &mut HashMap<&'c str, HashMap<&'c str, f32>>,
+        word1: &'c str,
+        word2: &'c str,
+    ) {
         graph
             .entry(word1)
             .or_default()
@@ -163,7 +163,7 @@ impl TextRankLogic {
                 words[i + 1..]
                     .iter()
                     .take(window_size)
-                    .filter( move |&word2| word1 != word2)
+                    .filter(move |&word2| word1 != word2)
                     .map(move |word2| (word1, word2))
             })
             .for_each(|(word1, word2)| {
