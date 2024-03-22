@@ -83,9 +83,9 @@ fn get_scores(
             .map(|(_, edges)| {
                 score_word(
                     edges,
-                    &node_indexes,
-                    &outgoing_weight_sums,
-                    &prev_scores,
+                    node_indexes,
+                    outgoing_weight_sums,
+                    prev_scores,
                     damping,
                 )
             })
@@ -99,9 +99,9 @@ fn get_scores(
             .map(|edges| {
                 score_word(
                     edges,
-                    &node_indexes,
-                    &outgoing_weight_sums,
-                    &prev_scores,
+                    node_indexes,
+                    outgoing_weight_sums,
+                    prev_scores,
                     damping,
                 )
             })
@@ -144,7 +144,7 @@ impl TextRankLogic {
     fn add_edge(graph: &mut HashMap<String, HashMap<String, f32>>, word1: &str, word2: &str) {
         graph
             .entry(word1.to_string())
-            .or_insert_with(HashMap::new)
+            .or_default()
             .entry(word2.to_string())
             .and_modify(|e| *e += 1.0)
             .or_insert(1.0);

@@ -60,7 +60,7 @@ If you are passionate about Rust development and looking to kickstart your caree
 "#;
 
 fn get_cs_hashset() -> HashSet<String> {
-    HashSet::from_iter(vec!["c", "computer"].iter().map(|s| s.to_string()))
+    HashSet::from_iter(["c", "computer"].iter().map(|s| s.to_string()))
 }
 
 fn get_stop_words() -> Vec<String> {
@@ -68,7 +68,7 @@ fn get_stop_words() -> Vec<String> {
     get(LANGUAGE::English)
         .iter()
         .filter_map(|w| {
-            let word = w.replace("\"", "");
+            let word = w.replace('\"', "");
             if !cs_hashset.contains(&word) {
                 Some(word)
             } else {
@@ -429,8 +429,7 @@ fn test_tf_idf() {
 fn test_co_occurrence() {
     let documents =
         tokenizer::Tokenizer::new(TEXT, &get_stop_words(), None).split_into_paragraphs();
-    let word_vec = vec![
-        "rust",
+    let word_vec = ["rust",
         "development",
         "environment",
         "work",
@@ -439,8 +438,7 @@ fn test_co_occurrence() {
         "career",
         "code",
         "developer",
-        "dynamic",
-    ]
+        "dynamic"]
     .iter()
     .map(|x| x.to_string())
     .collect::<Vec<String>>();
