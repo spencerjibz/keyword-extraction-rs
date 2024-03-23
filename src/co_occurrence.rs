@@ -20,12 +20,12 @@ use rayon::prelude::*;
 
 use crate::common::{Documents, WindowSize};
 
-type Words<'a> = &'a [String];
+type Words<'a> = &'a [&'a str];
 
-pub struct CoOccurrence {
+pub struct CoOccurrence <'s> {
     matrix: Vec<Vec<f32>>,
-    words: Vec<String>,
-    words_indexes: HashMap<String, usize>,
+    words: Vec<&'s str>,
+    words_indexes: HashMap<&'s str, usize>,
 }
 
 fn get_window_range(window_size: usize, index: usize, words_length: usize) -> Range<usize> {
@@ -34,14 +34,14 @@ fn get_window_range(window_size: usize, index: usize, words_length: usize) -> Ra
     window_start..window_end
 }
 
-fn create_words_indexes(words: &[String]) -> HashMap<String, usize> {
+fn create_words_indexes<'a>(words: &[&'a str]) -> HashMap<&'a str, usize> {
     #[cfg(feature = "parallel")]
     {
         words
             .par_iter()
             .enumerate()
-            .map(|(i, w)| (w.to_string(), i))
-            .collect::<HashMap<String, usize>>()
+            .map(|(i, &w)| (w, i))
+            .collect()
     }
 
     #[cfg(not(feature = "parallel"))]
@@ -49,14 +49,14 @@ fn create_words_indexes(words: &[String]) -> HashMap<String, usize> {
         words
             .iter()
             .enumerate()
-            .map(|(i, w)| (w.to_string(), i))
-            .collect::<HashMap<String, usize>>()
+            .map(|(i, &w)| (w, i))
+            .collect()
     }
 }
 
 fn get_matrix(
     documents: &[&str],
-    words_indexes: &HashMap<String, usize>,
+    words_indexes: &HashMap<&str, usize>,
     length: usize,
     window_size: usize,
 ) -> Vec<Vec<f32>> {
@@ -106,9 +106,9 @@ fn get_matrix(
     matrix
 }
 
-impl CoOccurrence {
+impl  <'s> CoOccurrence  <'s> {
     /// Create a new CoOccurrence instance.
-    pub fn new(documents: Documents, words: Words, window_size: WindowSize) -> Self {
+    pub fn new(documents: Documents<'s>, words: Words<'s>, window_size: WindowSize) -> Self {
         let words_indexes = create_words_indexes(words);
         let length = words.len();
 
@@ -125,8 +125,8 @@ impl CoOccurrence {
     }
 
     /// Get the word of a numeric label.
-    pub fn get_word(&self, label: usize) -> Option<String> {
-        self.words.get(label).map(|w| w.to_owned())
+    pub fn get_word(&'s self, label: usize) -> Option<&'s str> {
+        self.words.get(label).copied()
     }
 
     /// Get the matrix of the co-occurrence.
@@ -135,12 +135,12 @@ impl CoOccurrence {
     }
 
     /// Get the labels of the co-occurrence.
-    pub fn get_labels(&self) -> &HashMap<String, usize> {
+    pub fn get_labels(&self) -> &HashMap<&'s str, usize> {
         &self.words_indexes
     }
 
     /// Get all relations of a given word.
-    pub fn get_relations(&self, word: &str) -> Option<Vec<(String, f32)>> {
+    pub fn get_relations(&'s self, word: &str) -> Option<Vec<(&'s str, f32)>> {
         let label = match self.get_label(word) {
             Some(l) => l,
             None => return None,
@@ -161,7 +161,7 @@ impl CoOccurrence {
 
                         None
                     })
-                    .collect::<Vec<(String, f32)>>(),
+                    .collect(),
             )
         }
 
@@ -180,7 +180,7 @@ impl CoOccurrence {
 
                         None
                     })
-                    .collect::<Vec<(String, f32)>>(),
+                    .collect(),
             )
         }
     }

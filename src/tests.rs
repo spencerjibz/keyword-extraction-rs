@@ -440,10 +440,7 @@ fn test_co_occurrence() {
         "code",
         "developer",
         "dynamic",
-    ]
-    .iter()
-    .map(|x| x.to_string())
-    .collect::<Vec<String>>();
+    ].to_vec();
     let co_occurrence = co_occurrence::CoOccurrence::new(&documents, &word_vec, 10);
     assert_eq!(
         co_occurrence.get_matrix_row("rust").unwrap(),
