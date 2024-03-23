@@ -18,9 +18,8 @@ use std::{collections::HashMap, ops::Range};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::common::{Documents, WindowSize};
+use crate::common::WindowSize;
 
-type Words<'a> = &'a [&'a str];
 
 pub struct CoOccurrence<'s> {
     matrix: Vec<Vec<f32>>,
@@ -100,13 +99,14 @@ fn get_matrix(
 
 impl<'s> CoOccurrence<'s> {
     /// Create a new CoOccurrence instance.
-    pub fn new(documents: Documents<'s>, words: Words<'s>, window_size: WindowSize) -> Self {
-        let words_indexes = create_words_indexes(words);
+    pub fn new<T: AsRef<str>>(documents: &[T], words: &'s [T], window_size: WindowSize) -> Self {
+        let words: Vec<_> = words.iter().map(AsRef::as_ref).collect();
+        let words_indexes = create_words_indexes(&words);
         let length = words.len();
-
+        let documents: Vec<_> = documents.iter().map(AsRef::as_ref).collect();
         Self {
-            matrix: get_matrix(documents, &words_indexes, length, window_size),
-            words: words.to_vec(),
+            matrix: get_matrix(&documents, &words_indexes, length, window_size),
+            words,
             words_indexes,
         }
     }
