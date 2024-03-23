@@ -22,7 +22,7 @@ use crate::common::{Documents, WindowSize};
 
 type Words<'a> = &'a [&'a str];
 
-pub struct CoOccurrence <'s> {
+pub struct CoOccurrence<'s> {
     matrix: Vec<Vec<f32>>,
     words: Vec<&'s str>,
     words_indexes: HashMap<&'s str, usize>,
@@ -37,20 +37,12 @@ fn get_window_range(window_size: usize, index: usize, words_length: usize) -> Ra
 fn create_words_indexes<'a>(words: &[&'a str]) -> HashMap<&'a str, usize> {
     #[cfg(feature = "parallel")]
     {
-        words
-            .par_iter()
-            .enumerate()
-            .map(|(i, &w)| (w, i))
-            .collect()
+        words.par_iter().enumerate().map(|(i, &w)| (w, i)).collect()
     }
 
     #[cfg(not(feature = "parallel"))]
     {
-        words
-            .iter()
-            .enumerate()
-            .map(|(i, &w)| (w, i))
-            .collect()
+        words.iter().enumerate().map(|(i, &w)| (w, i)).collect()
     }
 }
 
@@ -106,7 +98,7 @@ fn get_matrix(
     matrix
 }
 
-impl  <'s> CoOccurrence  <'s> {
+impl<'s> CoOccurrence<'s> {
     /// Create a new CoOccurrence instance.
     pub fn new(documents: Documents<'s>, words: Words<'s>, window_size: WindowSize) -> Self {
         let words_indexes = create_words_indexes(words);
